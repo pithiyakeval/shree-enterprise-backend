@@ -12,7 +12,7 @@ DATABASE CONFIGURATION (PRODUCTION READY)
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import OperationalError
-from app.config import settings
+from backend.app.config import settings
 import asyncio
 import logging
 
@@ -33,10 +33,10 @@ engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
     future=True,
-    pool_size=10,               # Production pool size
-    max_overflow=20,           # Extra connections for bursts
-    pool_timeout=30,           # Connection timeout
-    pool_recycle=1800,         # Prevent stale connections (30 min)
+    pool_size=10,  # Production pool size
+    max_overflow=20,  # Extra connections for bursts
+    pool_timeout=30,  # Connection timeout
+    pool_recycle=1800,  # Prevent stale connections (30 min)
 )
 
 
@@ -93,7 +93,9 @@ async def verify_db_connection(retries: int = 3, delay: int = 2):
             return True
 
         except OperationalError:
-            logger.warning(f"DB connection failed (attempt {attempt}/{retries}). Retrying...")
+            logger.warning(
+                f"DB connection failed (attempt {attempt}/{retries}). Retrying..."
+            )
             await asyncio.sleep(delay * attempt)
             attempt += 1
 

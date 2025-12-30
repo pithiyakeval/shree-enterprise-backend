@@ -41,18 +41,15 @@ class Settings(BaseSettings):
     # =============================
     # ENVIRONMENT
     # =============================
-    ENVIRONMENT: str = "production"   # dev | production
-    ENV : str | None = None
+    ENVIRONMENT: str = "production"  # dev | production
+    ENV: str | None = None
     # =============================
     # AI / LLM
     # =============================
     MODEL_PATH: str
     LLAMA_CTX: int = 4096
 
-    model_config = SettingsConfigDict(
-        extra="ignore",
-        case_sensitive=False
-    )
+    model_config = SettingsConfigDict(extra="ignore", case_sensitive=False)
 
     # -----------------------------
     # Helpers
@@ -70,4 +67,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

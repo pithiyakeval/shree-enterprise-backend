@@ -9,6 +9,7 @@ from datetime import datetime
 # LEAD INPUT SCHEMA (Validated & Production Ready)
 # ==========================================================
 
+
 class BaseLeadCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=150)
     phone: str = Field(..., min_length=7, max_length=20)
@@ -25,14 +26,13 @@ class BaseLeadCreate(BaseModel):
     event_type: Optional[str] = Field(None, max_length=150)
     event_date: Optional[str] = Field(None, max_length=50)
 
-    model_config = {
-        "extra": "ignore"  # ignore unexpected frontend fields safely
-    }
+    model_config = {"extra": "ignore"}  # ignore unexpected frontend fields safely
 
 
 # ==========================================================
 # LEAD OUTPUT SCHEMA
 # ==========================================================
+
 
 class BaseLeadOut(BaseLeadCreate):
     id: int
@@ -44,6 +44,7 @@ class BaseLeadOut(BaseLeadCreate):
 # ==========================================================
 # CHILD TABLE OUTPUT SCHEMAS
 # ==========================================================
+
 
 class SolarOut(BaseModel):
     id: int
@@ -80,6 +81,7 @@ class CombinedOut(BaseModel):
 # ADMIN AUTH SCHEMAS
 # ==========================================================
 
+
 class AdminLogin(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=4)
@@ -106,6 +108,7 @@ class AdminLoginResponse(BaseModel):
 # ==========================================================
 # ADMIN PASSWORD RESET SCHEMA
 # ==========================================================
+
 
 class PasswordReset(BaseModel):
     new_password: str = Field(..., min_length=4)

@@ -20,11 +20,13 @@ INDEX, METAS = load_index()
 if INDEX is None or not METAS:
     logger.warning("FAISS index not loaded. RAG disabled.")
 
+
 # =================================================
 # Request schema
 # =================================================
 class ChatRequest(BaseModel):
     question: str
+
 
 # =================================================
 # Safe FAISS search
@@ -36,8 +38,8 @@ def search_docs(query: str, top_k: int = 4):
     language = detect_language(query)
 
     try:
-        embedding = embed_texts([query])[0]               # (dim,)
-        vector = np.array([embedding], dtype=np.float32) # (1, dim)
+        embedding = embed_texts([query])[0]  # (dim,)
+        vector = np.array([embedding], dtype=np.float32)  # (1, dim)
     except Exception as e:
         logger.error(f"Embedding failed: {e}")
         return []
@@ -57,16 +59,19 @@ def search_docs(query: str, top_k: int = 4):
         if meta.get("language") != language:
             continue
 
-        results.append({
-            "text": meta.get("text", ""),
-            "metadata": meta,
-            "distance": float(score),
-        })
+        results.append(
+            {
+                "text": meta.get("text", ""),
+                "metadata": meta,
+                "distance": float(score),
+            }
+        )
 
         if len(results) >= top_k:
             break
 
     return results
+
 
 # =================================================
 # Chat endpoint

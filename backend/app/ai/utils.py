@@ -3,7 +3,7 @@ def detect_language(text: str) -> str:
 
     # Gujarati Unicode
     for ch in text:
-        if "\u0A80" <= ch <= "\u0AFF":
+        if "\u0a80" <= ch <= "\u0aff":
             return "Gujarati"
 
     # Roman Gujarati keywords
@@ -16,9 +16,15 @@ def detect_language(text: str) -> str:
 
 def is_greeting(text: str) -> bool:
     greetings = [
-        "hi", "hello", "hey", "namaste",
-        "kem cho", "kem chho", "kemcho",
-        "ram ram", "jay shree krishna"
+        "hi",
+        "hello",
+        "hey",
+        "namaste",
+        "kem cho",
+        "kem chho",
+        "kemcho",
+        "ram ram",
+        "jay shree krishna",
     ]
     t = text.lower().strip()
     return any(g in t for g in greetings)

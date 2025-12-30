@@ -14,8 +14,7 @@ logger = logging.getLogger("ai_embeddings")
 # ======================================================
 
 EMBEDDING_MODEL_NAME = os.getenv(
-    "EMBEDDING_MODEL",
-    "sentence-transformers/all-MiniLM-L6-v2"
+    "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
 )
 
 HF_CACHE_DIR = "/ai-models/hf-cache"
@@ -41,9 +40,7 @@ def get_embedding_model() -> SentenceTransformer:
         logger.info(f"Loading embedding model: {EMBEDDING_MODEL_NAME}")
 
         _model = SentenceTransformer(
-            EMBEDDING_MODEL_NAME,
-            cache_folder=HF_CACHE_DIR,
-            local_files_only=True
+            EMBEDDING_MODEL_NAME, cache_folder=HF_CACHE_DIR, local_files_only=True
         )
 
         logger.info("Embedding model loaded successfully")
@@ -60,9 +57,8 @@ def get_embedding_model() -> SentenceTransformer:
 # EMBEDDING FUNCTION (SAFE)
 # ======================================================
 
-def embed_texts(
-    texts: Union[str, List[str]]
-) -> List[np.ndarray]:
+
+def embed_texts(texts: Union[str, List[str]]) -> List[np.ndarray]:
     """
     Convert text(s) into float32 embeddings.
     Always returns a list of numpy arrays.
@@ -81,7 +77,7 @@ def embed_texts(
             texts,
             convert_to_numpy=True,
             show_progress_bar=False,
-            normalize_embeddings=True   # 🔑 improves FAISS quality
+            normalize_embeddings=True,  # 🔑 improves FAISS quality
         )
 
         # Ensure float32 for FAISS
@@ -89,4 +85,4 @@ def embed_texts(
 
     except Exception as e:
         logger.exception("❌ Embedding generation failed")
-        return []   # IMPORTANT: never crash API
+        return []  # IMPORTANT: never crash API

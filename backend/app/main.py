@@ -3,11 +3,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.database import engine, Base
-from app.routers import lead, admin
-from app.config import settings
-from app.middleware.cleaner import CleanEmptyStringsMiddleware
-from app.ai import chat_router
+from backend.app.database import engine, Base
+from backend.app.routers import lead, admin
+from backend.app.config import settings
+from backend.app.middleware.cleaner import CleanEmptyStringsMiddleware
+from backend.app.ai import chat_router
 
 
 logging.basicConfig(

@@ -24,6 +24,7 @@ META_PATH = DATA_DIR / "faiss_meta.json"
 # SAVE FAISS INDEX + METADATA
 # ======================================================
 
+
 def save_index(index: faiss.Index, metas: List[Dict]) -> None:
     """
     Persist FAISS index and metadata safely.
@@ -33,8 +34,7 @@ def save_index(index: faiss.Index, metas: List[Dict]) -> None:
     try:
         faiss.write_index(index, str(FAISS_PATH))
         META_PATH.write_text(
-            json.dumps(metas, ensure_ascii=False, indent=2),
-            encoding="utf-8"
+            json.dumps(metas, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         logger.info("FAISS index saved successfully")
@@ -48,6 +48,7 @@ def save_index(index: faiss.Index, metas: List[Dict]) -> None:
 # ======================================================
 # LOAD FAISS INDEX + METADATA
 # ======================================================
+
 
 def load_index() -> Tuple[Optional[faiss.Index], List[Dict]]:
     """
@@ -78,6 +79,7 @@ def load_index() -> Tuple[Optional[faiss.Index], List[Dict]]:
 # ======================================================
 # BUILD FAISS INDEX (INGEST PIPELINE)
 # ======================================================
+
 
 def build_faiss(embeddings: np.ndarray, metas: List[Dict]) -> None:
     """
@@ -110,10 +112,9 @@ def build_faiss(embeddings: np.ndarray, metas: List[Dict]) -> None:
 # LOW-LEVEL SEARCH (OPTIONAL HELPER)
 # ======================================================
 
+
 def search_vectors(
-    index: faiss.Index,
-    query_vector: np.ndarray,
-    top_k: int = 4
+    index: faiss.Index, query_vector: np.ndarray, top_k: int = 4
 ) -> List[int]:
     """
     Low-level FAISS search helper.

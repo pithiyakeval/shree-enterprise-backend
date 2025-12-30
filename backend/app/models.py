@@ -21,12 +21,13 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import relationship
-from app.database import Base
+from backend.app.database import Base
 
 
 # ============================================================
 # BASE LEADS TABLE
 # ============================================================
+
 
 class BaseLead(Base):
     __tablename__ = "base_leads"
@@ -42,10 +43,7 @@ class BaseLead(Base):
 
     # Service assigned: solar / mandap / both
     service = Column(
-        String(20),
-        nullable=False,
-        index=True,
-        doc="Lead type: solar / mandap / both"
+        String(20), nullable=False, index=True, doc="Lead type: solar / mandap / both"
     )
 
     # Where user came from: home / solar / mandap / contact
@@ -64,7 +62,7 @@ class BaseLead(Base):
         nullable=False,
         server_default="Pending",
         index=True,
-        doc="Lead workflow status: Pending / Done"
+        doc="Lead workflow status: Pending / Done",
     )
 
     # Relationships
@@ -72,21 +70,21 @@ class BaseLead(Base):
         "SolarRequest",
         back_populates="lead",
         uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     mandap_request = relationship(
         "MandapRequest",
         back_populates="lead",
         uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     combined_request = relationship(
         "CombinedRequest",
         back_populates="lead",
         uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
 
@@ -94,11 +92,14 @@ class BaseLead(Base):
 # SOLAR TABLE
 # ============================================================
 
+
 class SolarRequest(Base):
     __tablename__ = "solar_requests"
 
     id = Column(Integer, primary_key=True)
-    lead_id = Column(Integer, ForeignKey("base_leads.id", ondelete="CASCADE"), index=True)
+    lead_id = Column(
+        Integer, ForeignKey("base_leads.id", ondelete="CASCADE"), index=True
+    )
 
     kw = Column(String(50), nullable=True)
     budget = Column(String(150), nullable=True)
@@ -110,11 +111,14 @@ class SolarRequest(Base):
 # MANDAP TABLE
 # ============================================================
 
+
 class MandapRequest(Base):
     __tablename__ = "mandap_requests"
 
     id = Column(Integer, primary_key=True)
-    lead_id = Column(Integer, ForeignKey("base_leads.id", ondelete="CASCADE"), index=True)
+    lead_id = Column(
+        Integer, ForeignKey("base_leads.id", ondelete="CASCADE"), index=True
+    )
 
     event_type = Column(String(150), nullable=True)
     budget = Column(String(150), nullable=True)
@@ -127,11 +131,14 @@ class MandapRequest(Base):
 # COMBINED TABLE (BOTH)
 # ============================================================
 
+
 class CombinedRequest(Base):
     __tablename__ = "combined_requests"
 
     id = Column(Integer, primary_key=True)
-    lead_id = Column(Integer, ForeignKey("base_leads.id", ondelete="CASCADE"), index=True)
+    lead_id = Column(
+        Integer, ForeignKey("base_leads.id", ondelete="CASCADE"), index=True
+    )
 
     kw = Column(String(50), nullable=True)
     solar_budget = Column(String(150), nullable=True)
@@ -146,6 +153,7 @@ class CombinedRequest(Base):
 # ============================================================
 # ADMIN USER TABLE
 # ============================================================
+
 
 class AdminUser(Base):
     __tablename__ = "admin_users"

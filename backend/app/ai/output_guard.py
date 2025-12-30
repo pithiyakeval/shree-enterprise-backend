@@ -1,12 +1,13 @@
 import re
 
 FORBIDDEN_PATTERNS = [
-    r"\[.*?\]",                # removes [anything]
+    r"\[.*?\]",  # removes [anything]
     r"Owner contact numbers",
     r"Developer contact",
     r"Website:",
     r"http[s]?://\S+",
 ]
+
 
 def sanitize_answer(text: str) -> str:
     if not text:

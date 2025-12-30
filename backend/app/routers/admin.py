@@ -86,7 +86,7 @@ async def register_first_admin(payload: AdminLogin, db: AsyncSession = Depends(g
     if total_admins > 0:
         raise HTTPException(
             status_code=403,
-            detail="First admin already exists. Use /api/admin/register (protected)."
+            detail="First admin already exists. Use /api/admin/register (protected).",
         )
 
     admin = await create_admin(db, payload.email, payload.password)
@@ -125,18 +125,20 @@ async def register_admin(
 @router.get("/leads")
 async def all_leads(
     db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin)
+    current_admin: models.AdminUser = Depends(get_current_admin),
 ):
     from app.crud import get_all_base_leads
+
     return await get_all_base_leads(db)
 
 
 @router.get("/solar")
 async def solar_list(
     db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin)
+    current_admin: models.AdminUser = Depends(get_current_admin),
 ):
     from app.crud import get_solar_requests
+
     rows = await get_solar_requests(db)
     return [{"solar": s, "base": b} for s, b in rows]
 
@@ -144,9 +146,10 @@ async def solar_list(
 @router.get("/mandap")
 async def mandap_list(
     db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin)
+    current_admin: models.AdminUser = Depends(get_current_admin),
 ):
     from app.crud import get_mandap_requests
+
     rows = await get_mandap_requests(db)
     return [{"mandap": m, "base": b} for m, b in rows]
 
@@ -154,9 +157,10 @@ async def mandap_list(
 @router.get("/combined")
 async def combined_list(
     db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin)
+    current_admin: models.AdminUser = Depends(get_current_admin),
 ):
     from app.crud import get_combined_requests
+
     rows = await get_combined_requests(db)
     return [{"combined": c, "base": b} for c, b in rows]
 
@@ -168,7 +172,7 @@ async def combined_list(
 async def mark_done(
     lead_id: int,
     db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin)
+    current_admin: models.AdminUser = Depends(get_current_admin),
 ):
     lead = await db.get(models.BaseLead, lead_id)
     if not lead:
@@ -188,7 +192,7 @@ async def mark_done(
 async def delete_lead(
     lead_id: int,
     db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin)
+    current_admin: models.AdminUser = Depends(get_current_admin),
 ):
     lead = await db.get(models.BaseLead, lead_id)
     if not lead:
@@ -207,15 +211,12 @@ async def delete_lead(
 @router.get("/admins")
 async def list_admins(
     current_admin: models.AdminUser = Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(models.AdminUser))
     admins = result.scalars().all()
 
-    return [
-        {"id": a.id, "email": a.email, "created_at": a.created_at}
-        for a in admins
-    ]
+    return [{"id": a.id, "email": a.email, "created_at": a.created_at} for a in admins]
 
 
 # ============================================================

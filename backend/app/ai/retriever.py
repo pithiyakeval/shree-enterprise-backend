@@ -24,6 +24,7 @@ if INDEX is None or not METAS:
 # RETRIEVER
 # ======================================================
 
+
 def retrieve(query: str, k: int = 4) -> List[Dict]:
     """
     Production-grade retriever.
@@ -86,11 +87,13 @@ def retrieve(query: str, k: int = 4) -> List[Dict]:
         if not text or len(text) < 30:
             continue
 
-        results.append({
-            "text": text,
-            "source": meta.get("source"),
-            "distance": float(dist),
-        })
+        results.append(
+            {
+                "text": text,
+                "source": meta.get("source"),
+                "distance": float(dist),
+            }
+        )
 
         if len(results) >= k:
             break

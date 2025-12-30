@@ -22,9 +22,7 @@ def get_database_url():
 
 def run_migrations_online():
     connectable = engine_from_config(
-        {
-            "sqlalchemy.url": get_database_url()
-        },
+        {"sqlalchemy.url": get_database_url()},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

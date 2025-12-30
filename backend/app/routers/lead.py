@@ -125,8 +125,6 @@ async def submit_lead(
             lead.name,
         )
 
-    logger.info(
-        f"Lead submitted → {lead.service} from {client_ip}"
-    )
+    logger.info(f"Lead submitted → {lead.service} from {client_ip}")
 
     return new_lead

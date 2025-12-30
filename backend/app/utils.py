@@ -56,6 +56,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 # JWT TOKENS
 # ============================================================
 
+
 def create_access_token(
     data: dict,
     expires_minutes: int = settings.ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -87,6 +88,7 @@ def decode_token(token: str) -> Optional[dict]:
 # EMAIL VALIDATION
 # ============================================================
 
+
 def is_valid_email(email: str) -> bool:
     """
     Simple RFC-safe email validation
@@ -97,6 +99,7 @@ def is_valid_email(email: str) -> bool:
 # ============================================================
 # LOW-LEVEL SMTP SENDER (DO NOT ADD BUSINESS LOGIC HERE)
 # ============================================================
+
 
 def _send_email_raw(to_email: str, subject: str, body: str) -> bool:
     """
@@ -127,6 +130,7 @@ def _send_email_raw(to_email: str, subject: str, body: str) -> bool:
 # ============================================================
 # OWNER NOTIFICATION EMAIL (BACKGROUND SAFE)
 # ============================================================
+
 
 def send_owner_notification_email(subject: str, body: str) -> None:
     """
@@ -161,6 +165,7 @@ def send_owner_notification_email(subject: str, body: str) -> None:
 # USER CONFIRMATION EMAIL
 # ============================================================
 
+
 def send_user_confirmation_email(user_email: str, user_name: str) -> None:
     """
     Sends a clean, professional confirmation email to the user.
@@ -186,10 +191,10 @@ Shree Enterprise
     _send_email_raw(user_email, subject, body)
 
 
-def detect_language(text:str) -> str:
-    """ Detect Gujarati vs English using  Unicode range"""
+def detect_language(text: str) -> str:
+    """Detect Gujarati vs English using  Unicode range"""
 
-    for ch in  text:
-        if "\u0A80" <= ch <= "\u0AFF":
+    for ch in text:
+        if "\u0a80" <= ch <= "\u0aff":
             return "Gujarati"
     return "English"

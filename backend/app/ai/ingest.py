@@ -23,17 +23,14 @@ from app.ai.vectorestore import build_faiss
 # -------------------------------------------------
 # Logging (production-safe)
 # -------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s → %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s → %(message)s")
 logger = logging.getLogger("ai_ingest")
 
 # -------------------------------------------------
 # Path configuration (ABSOLUTE, SAFE)
 # -------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent   # app/
-DATA_DIR = BASE_DIR / "data"                        # app/data/
+BASE_DIR = Path(__file__).resolve().parent.parent  # app/
+DATA_DIR = BASE_DIR / "data"  # app/data/
 
 LANGUAGES = ["en", "gu"]
 
@@ -48,6 +45,7 @@ FILES = [
     "faq.txt",
     "contact.txt",
 ]
+
 
 # -------------------------------------------------
 # Chunking logic (clean, semantic)
@@ -81,6 +79,7 @@ def chunk_text(text: str) -> list[str]:
             chunks.append(block)
 
     return chunks
+
 
 # -------------------------------------------------
 # Ingestion pipeline
@@ -120,12 +119,14 @@ def run() -> None:
                 continue
 
             for idx, chunk in enumerate(chunks):
-                metas.append({
-                    "language": lang,
-                    "source": file_name.replace(".txt", ""),
-                    "chunk_id": idx,
-                    "text": chunk
-                })
+                metas.append(
+                    {
+                        "language": lang,
+                        "source": file_name.replace(".txt", ""),
+                        "chunk_id": idx,
+                        "text": chunk,
+                    }
+                )
                 all_chunks.append(chunk)
 
             logger.info(f"✅ {file_name}: {len(chunks)} chunks")
@@ -135,8 +136,7 @@ def run() -> None:
     # -------------------------------------------------
     if not all_chunks:
         raise RuntimeError(
-            "❌ Ingestion failed: No chunks found. "
-            "Check app/data files."
+            "❌ Ingestion failed: No chunks found. " "Check app/data files."
         )
 
     logger.info(f"🔹 Total chunks prepared: {len(all_chunks)}")
@@ -145,10 +145,7 @@ def run() -> None:
     # Embedding + FAISS build
     # -------------------------------------------------
     try:
-        embeddings = np.array(
-            embed_texts(all_chunks),
-            dtype=np.float32
-        )
+        embeddings = np.array(embed_texts(all_chunks), dtype=np.float32)
     except Exception as e:
         raise RuntimeError(f"❌ Embedding failed: {e}")
 
@@ -156,6 +153,7 @@ def run() -> None:
 
     logger.info("✅ FAISS index built successfully")
     logger.info("🎉 Multilingual ingestion complete")
+
 
 # -------------------------------------------------
 # CLI entry

@@ -12,8 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import models, schemas
-from app.utils import verify_password, get_password_hash
+from backend.app import models, schemas
+from backend.app.utils import verify_password, get_password_hash
 
 import logging
 
@@ -23,6 +23,7 @@ logger = logging.getLogger("crud")
 # ============================================================
 # LEAD CREATION
 # ============================================================
+
 
 async def create_lead_with_service(db: AsyncSession, lead_in: schemas.BaseLeadCreate):
     """
@@ -57,29 +58,33 @@ async def create_lead_with_service(db: AsyncSession, lead_in: schemas.BaseLeadCr
         # -----------------------
 
         if service == "solar":
-            db.add(models.SolarRequest(
-                lead_id=base.id,
-                kw=d.get("kw"),
-                budget=d.get("budget")
-            ))
+            db.add(
+                models.SolarRequest(
+                    lead_id=base.id, kw=d.get("kw"), budget=d.get("budget")
+                )
+            )
 
         elif service == "mandap":
-            db.add(models.MandapRequest(
-                lead_id=base.id,
-                event_type=d.get("event_type"),
-                budget=d.get("budget"),
-                event_date=d.get("event_date")
-            ))
+            db.add(
+                models.MandapRequest(
+                    lead_id=base.id,
+                    event_type=d.get("event_type"),
+                    budget=d.get("budget"),
+                    event_date=d.get("event_date"),
+                )
+            )
 
         elif service == "both":
-            db.add(models.CombinedRequest(
-                lead_id=base.id,
-                kw=d.get("kw"),
-                solar_budget=d.get("budget"),
-                event_type=d.get("event_type"),
-                mandap_budget=d.get("budget"),
-                event_date=d.get("event_date")
-            ))
+            db.add(
+                models.CombinedRequest(
+                    lead_id=base.id,
+                    kw=d.get("kw"),
+                    solar_budget=d.get("budget"),
+                    event_type=d.get("event_type"),
+                    mandap_budget=d.get("budget"),
+                    event_date=d.get("event_date"),
+                )
+            )
 
         else:
             logger.error(f"Unknown service type received: {service}")
@@ -106,11 +111,10 @@ async def create_lead_with_service(db: AsyncSession, lead_in: schemas.BaseLeadCr
 # ADMIN GETTERS
 # ============================================================
 
+
 async def get_all_base_leads(db: AsyncSession, limit: int = 200):
     q = await db.execute(
-        select(models.BaseLead)
-        .order_by(models.BaseLead.created_at.desc())
-        .limit(limit)
+        select(models.BaseLead).order_by(models.BaseLead.created_at.desc()).limit(limit)
     )
     return q.scalars().all()
 
@@ -148,6 +152,7 @@ async def get_combined_requests(db: AsyncSession, limit: int = 200):
 # ============================================================
 # ADMIN AUTH MANAGEMENT
 # ============================================================
+
 
 async def create_admin(db: AsyncSession, email: str, password: str):
     """

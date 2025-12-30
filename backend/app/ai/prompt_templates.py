@@ -29,9 +29,7 @@ Rules:
 def build_prompt(question: str, contexts: List[Dict]) -> str:
     language = detect_language(question)
 
-    context_text = "\n".join(
-        c["text"] for c in contexts[:3] if c.get("text")
-    )
+    context_text = "\n".join(c["text"] for c in contexts[:3] if c.get("text"))
 
     return f"""
 {SYSTEM_PROMPT}
