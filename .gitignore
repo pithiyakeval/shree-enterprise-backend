@@ -1,0 +1,65 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+.env.prod
+.env.local
+
+# =========================
+# Databases / Data
+# =========================
+data/
+*.db
+*.sqlite
+*.sqlite3
+migrations_backup/
+
+# =========================
+# Node / Frontend (safety)
+# =========================
+node_modules/
+dist/
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =========================
+# AI / Models (CRITICAL)
+# =========================
+ai-models/
+hf-temp/
+ollama/
+models/
+*.gguf
+*.bin
+*.pt
+*.pth
+
+# =========================
+# Infra (LOCAL ONLY)
+# =========================
+docker-compose.prod.yml
+nginx/
+
+# =========================
+# Tests (optional)
+# =========================
+tests/
+
+
