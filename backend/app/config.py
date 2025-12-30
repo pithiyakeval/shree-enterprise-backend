@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str
 
     # =============================
-    # SMTP / EMAIL
+    # EMAIL
     # =============================
     SMTP_HOST: Optional[str] = None
     SMTP_PORT: Optional[int] = None
@@ -36,24 +36,26 @@ class Settings(BaseSettings):
     # =============================
     # FRONTEND
     # =============================
-    FRONTEND_URL: str = "http://localhost:8081"
+    FRONTEND_URL: str = "http://localhost:3000"
 
     # =============================
     # ENVIRONMENT
     # =============================
     ENVIRONMENT: str = "production"  # dev | production
-    ENV: str | None = None
-    # =============================
-    # AI / LLM
-    # =============================
-    MODEL_PATH: str
-    LLAMA_CTX: int = 4096
+    ENABLE_DOCS: bool = False        # 🔥 FIXED
 
-    model_config = SettingsConfigDict(extra="ignore", case_sensitive=False)
+    # =============================
+    # AI (OPTIONAL ON FREE TIER)
+    # =============================
+    MODEL_PATH: Optional[str] = None
+    LLAMA_CTX: int = 2048
 
-    # -----------------------------
-    # Helpers
-    # -----------------------------
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
     def owner_email_list(self) -> List[str]:
         if not self.OWNER_EMAILS:
             return []
