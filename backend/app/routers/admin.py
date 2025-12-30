@@ -8,20 +8,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from jose import JWTError
 
-from app import models
-from app.database import get_db
-from app.schemas import AdminLogin, AdminLoginResponse
-from app.utils import (
+from backend.app import models
+from backend.app.database import get_db
+from backend.app.schemas import AdminLogin, AdminLoginResponse
+from backend.app.utils import (
     create_access_token,
     decode_token,
     get_password_hash,
 )
-from app.crud import (
+from backend.app.crud import (
     authenticate_admin,
     create_admin,
     get_admin_by_email,
 )
-from app.config import settings
+from backend.app.config import settings
 
 logger = logging.getLogger("shree_backend.admin")
 
