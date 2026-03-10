@@ -9,10 +9,10 @@ from fastapi import (
     HTTPException,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.database import get_db
-from backend.app.schemas import BaseLeadCreate, BaseLeadOut
-from backend.app.crud import create_lead_with_service
-from backend.app.utils import (
+from app.database import get_db
+from app.schemas import BaseLeadCreate, BaseLeadOut
+from app.crud import create_lead_with_service
+from app.utils import (
     send_owner_notification_email,
     send_user_confirmation_email,
 )

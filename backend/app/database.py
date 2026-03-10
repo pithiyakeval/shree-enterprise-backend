@@ -12,7 +12,7 @@ DATABASE CONFIGURATION (PRODUCTION READY)
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import OperationalError
-from backend.app.config import settings
+from app.config import settings
 import asyncio
 import logging
 

@@ -3,14 +3,14 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.app.database import engine, Base
-from backend.app.routers import lead, admin
-from backend.app.config import settings
-from backend.app.middleware.cleaner import CleanEmptyStringsMiddleware
+from app.database import engine, Base
+from app.routers import lead, admin
+from app.config import settings
+from app.middleware.cleaner import CleanEmptyStringsMiddleware
 
 # ⚠️ AI router loaded lazily (important)
 try:
-    from backend.app.ai import chat_router
+    from app.ai import chat_router
     AI_ENABLED = True
 except Exception as e:
     AI_ENABLED = False
@@ -48,7 +48,7 @@ origins = (
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # later restrict in prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

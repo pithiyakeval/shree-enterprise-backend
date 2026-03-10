@@ -12,8 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.app import models, schemas
-from backend.app.utils import verify_password, get_password_hash
+from app import models, schemas
+from app.utils import verify_password, get_password_hash
 
 import logging
 

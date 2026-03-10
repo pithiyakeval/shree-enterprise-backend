@@ -12,7 +12,7 @@ from email.mime.multipart import MIMEMultipart
 
 from argon2 import PasswordHasher, exceptions as argon_exc
 
-from backend.app.config import settings
+from app.config import settings
 
 
 # ============================================================

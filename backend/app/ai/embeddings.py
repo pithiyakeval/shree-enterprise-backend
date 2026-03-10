@@ -4,7 +4,6 @@ import os
 import logging
 import numpy as np
 from typing import List, Union
-
 from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger("ai_embeddings")
@@ -22,10 +21,7 @@ HF_CACHE_DIR = "/ai-models/hf-cache"
 # ======================================================
 # LOAD MODEL ONCE (SAFE SINGLETON)
 # ======================================================
-
 _model: SentenceTransformer | None = None
-
-
 def get_embedding_model() -> SentenceTransformer:
     """
     Load SentenceTransformer once.
@@ -40,7 +36,7 @@ def get_embedding_model() -> SentenceTransformer:
         logger.info(f"Loading embedding model: {EMBEDDING_MODEL_NAME}")
 
         _model = SentenceTransformer(
-            EMBEDDING_MODEL_NAME, cache_folder=HF_CACHE_DIR, local_files_only=True
+            EMBEDDING_MODEL_NAME, cache_folder=HF_CACHE_DIR, local_files_only=False
         )
 
         logger.info("Embedding model loaded successfully")
@@ -56,8 +52,6 @@ def get_embedding_model() -> SentenceTransformer:
 # ======================================================
 # EMBEDDING FUNCTION (SAFE)
 # ======================================================
-
-
 def embed_texts(texts: Union[str, List[str]]) -> List[np.ndarray]:
     """
     Convert text(s) into float32 embeddings.

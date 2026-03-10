@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # ENVIRONMENT
     # =============================
     ENVIRONMENT: str = "production"  # dev | production
-    ENABLE_DOCS: bool = False        # 🔥 FIXED
+    ENABLE_DOCS: bool = True       # 🔥 FIXED
 
     # =============================
     # AI (OPTIONAL ON FREE TIER)
@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     LLAMA_CTX: int = 2048
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file="../.env",
         extra="ignore",
         case_sensitive=False,
     )
@@ -63,7 +63,7 @@ class Settings(BaseSettings):
 
     @field_validator("*", mode="before")
     def strip_spaces(cls, v):
-        if isinstance(v, str):
+        if isinstance(v, str):  
             return v.strip()
         return v
 
