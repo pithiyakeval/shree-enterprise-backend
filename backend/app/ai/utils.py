@@ -14,17 +14,26 @@ def detect_language(text: str) -> str:
     return "English"
 
 
-def is_greeting(text: str) -> bool:
-    greetings = [
+def is_greeting(text):
+
+    greetings=[
+
         "hi",
+        "hii",
         "hello",
         "hey",
         "namaste",
-        "kem cho",
-        "kem chho",
-        "kemcho",
-        "ram ram",
-        "jay shree krishna",
+        "good morning",
+        "good evening",
+        "good afternoon",
+        "hii ai",
+        "hello ai",
+        "hello there",
+        
+
+
     ]
-    t = text.lower().strip()
-    return any(g in t for g in greetings)
+
+    t=text.lower().strip()
+
+    return t in greetings

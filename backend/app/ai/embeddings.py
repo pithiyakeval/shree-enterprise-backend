@@ -1,82 +1,193 @@
-# app/ai/embeddings.py
+"""
+Production embedding service for Shree Enterprise AI
+
+Features:
+✔ Singleton model load (no reload per request)
+✔ HuggingFace cache support (Render safe)
+✔ Memory safe normalization
+✔ Query cache (faster repeated queries)
+✔ Cloud deployment ready
+✔ Startup warm loading supported
+"""
 
 import os
 import logging
 import numpy as np
-from typing import List, Union
+from typing import List, Union, Optional
 from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger("ai_embeddings")
 
-# ======================================================
+
+# ==========================================================
 # CONFIG
-# ======================================================
+# ==========================================================
 
 EMBEDDING_MODEL_NAME = os.getenv(
-    "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+    "EMBEDDING_MODEL",
+    "BAAI/bge-small-en-v1.5"
 )
 
-HF_CACHE_DIR = "/ai-models/hf-cache"
+# IMPORTANT → use hf-cache not ai_models
+HF_CACHE_DIR = os.getenv(
+    "HF_CACHE_DIR",
+    "./hf-cache"
+)
 
-# ======================================================
-# LOAD MODEL ONCE (SAFE SINGLETON)
-# ======================================================
-_model: SentenceTransformer | None = None
+DEVICE = os.getenv(
+    "EMBEDDING_DEVICE",
+    "cpu"
+)
+
+# Prevent memory explosion
+MAX_CACHE = 1000
+
+# Query embedding cache
+EMBED_CACHE: dict[str, List[float]] = {}
+
+
+# ==========================================================
+# MODEL SINGLETON
+# ==========================================================
+
+_model: Optional[SentenceTransformer] = None
+
+
 def get_embedding_model() -> SentenceTransformer:
     """
-    Load SentenceTransformer once.
-    Never crashes the app — raises RuntimeError only at startup/ingest.
+    Load embedding model once.
+    Production safe singleton.
     """
+
     global _model
 
-    if _model is not None:
+    if _model:
         return _model
 
     try:
-        logger.info(f"Loading embedding model: {EMBEDDING_MODEL_NAME}")
+
+        logger.info(f"Loading embedding model → {EMBEDDING_MODEL_NAME}")
 
         _model = SentenceTransformer(
-            EMBEDDING_MODEL_NAME, cache_folder=HF_CACHE_DIR, local_files_only=False
+
+            EMBEDDING_MODEL_NAME,
+
+            cache_folder=HF_CACHE_DIR,
+
+            device=DEVICE
+
         )
 
-        logger.info("Embedding model loaded successfully")
+        logger.info("Embedding model ready")
+
         return _model
 
     except Exception as e:
-        logger.exception("❌ Failed to load embedding model")
+
+        logger.exception("Embedding model failed")
+
         raise RuntimeError(
-            f"Embedding model load failed: {EMBEDDING_MODEL_NAME}"
+            "Embedding model initialization failed"
         ) from e
 
 
-# ======================================================
-# EMBEDDING FUNCTION (SAFE)
-# ======================================================
-def embed_texts(texts: Union[str, List[str]]) -> List[np.ndarray]:
+# ==========================================================
+# BULK EMBEDDINGS
+# ==========================================================
+
+def embed_texts(
+    texts: Union[str, List[str]]
+) -> List[List[float]]:
     """
-    Convert text(s) into float32 embeddings.
-    Always returns a list of numpy arrays.
+    Generate embeddings for list.
+    Always returns float32 vectors.
     """
 
     if not texts:
         return []
 
     if isinstance(texts, str):
-        texts = [texts]
+        texts=[texts]
 
-    model = get_embedding_model()
+    model=get_embedding_model()
 
     try:
-        vectors = model.encode(
+
+        vectors=model.encode(
+
             texts,
+
             convert_to_numpy=True,
+
+            normalize_embeddings=True,
+
             show_progress_bar=False,
-            normalize_embeddings=True,  # 🔑 improves FAISS quality
+
+            batch_size=32
+
         )
 
-        # Ensure float32 for FAISS
-        return [vec.astype(np.float32) for vec in vectors]
+        return vectors.astype(np.float32).tolist()
 
-    except Exception as e:
-        logger.exception("❌ Embedding generation failed")
-        return []  # IMPORTANT: never crash API
+    except Exception:
+
+        logger.exception("Embedding generation failed")
+
+        return []
+
+
+# ==========================================================
+# QUERY EMBEDDING
+# ==========================================================
+
+def embed_query(text:str)->List[float]:
+    """
+    Optimized single query embedding.
+    Uses small cache.
+    """
+
+    if not text:
+        return []
+
+    # cache hit
+    if text in EMBED_CACHE:
+        return EMBED_CACHE[text]
+
+    vectors=embed_texts(text)
+
+    if not vectors:
+        return []
+
+    vector=vectors[0]
+
+    # Prevent cache overflow
+    if len(EMBED_CACHE) > MAX_CACHE:
+
+        EMBED_CACHE.clear()
+
+        logger.info("Embedding cache cleared")
+
+    EMBED_CACHE[text]=vector
+
+    return vector
+
+
+# ==========================================================
+# STARTUP WARM LOAD
+# ==========================================================
+
+def warmup_embeddings():
+    """
+    Preload model during FastAPI startup.
+    Prevents first request delay.
+    """
+
+    try:
+
+        get_embedding_model()
+
+        logger.info("Embedding model warmed")
+
+    except Exception:
+
+        logger.exception("Embedding warmup failed")

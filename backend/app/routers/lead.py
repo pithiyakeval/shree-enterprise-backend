@@ -21,7 +21,7 @@ import re
 import time
 
 
-router = APIRouter(prefix="/api/lead", tags=["lead"])
+router = APIRouter(prefix="/lead", tags=["lead"])
 
 logger = logging.getLogger("lead_logger")
 

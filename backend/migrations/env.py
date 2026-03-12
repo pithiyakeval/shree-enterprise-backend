@@ -23,7 +23,7 @@ config = context.config
 # Inject database URL dynamically
 config.set_main_option(
     "sqlalchemy.url",
-    settings.DATABASE_URL_SYNC
+    settings.DATABASE_URL_SYNC.replace("%","%%")
 )
 
 # Logging

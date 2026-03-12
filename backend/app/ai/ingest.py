@@ -1,36 +1,35 @@
-# app/ai/ingest.py
 """
-FAISS ingestion pipeline for Shree Enterprise AI assistant.
+Production RAG ingestion pipeline for Shree Enterprise AI assistant.
 
-- Reads multilingual business documents
-- Splits into clean semantic chunks
-- Embeds using sentence-transformers
-- Builds and persists FAISS index + metadata
-
-SAFE FOR:
-- Local development
-- Docker
-- Production server
+Features:
+- Multilingual document ingestion
+- Semantic chunking
+- Embedding generation
+- Qdrant vector storage
+- Metadata payload support
+- Batch ingestion for performance
 """
 
 from pathlib import Path
-import numpy as np
 import logging
+from typing import List, Dict
 
 from app.ai.embeddings import embed_texts
-from app.ai.vectorestore import build_faiss
+from app.ai.qdrant_store import init_collection, upsert_vectors
 
-# -------------------------------------------------
-# Logging (production-safe)
-# -------------------------------------------------
+# --------------------------------------------------
+# Logging
+# --------------------------------------------------
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s → %(message)s")
 logger = logging.getLogger("ai_ingest")
 
-# -------------------------------------------------
-# Path configuration (ABSOLUTE, SAFE)
-# -------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent  # app/
-DATA_DIR = BASE_DIR / "data"  # app/data/
+# --------------------------------------------------
+# Path configuration
+# --------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
 
 LANGUAGES = ["en", "gu"]
 
@@ -46,79 +45,85 @@ FILES = [
     "contact.txt",
 ]
 
+# --------------------------------------------------
+# Chunking logic
+# --------------------------------------------------
 
-# -------------------------------------------------
-# Chunking logic (clean, semantic)
-# -------------------------------------------------
-def chunk_text(text: str) -> list[str]:
+def chunk_text(text: str) -> List[str]:
     """
-    Splits text into semantic chunks.
-    Keeps content human-readable and answer-ready.
+    Convert raw document text into semantic chunks.
     """
+
     if not text:
         return []
 
-    # Normalize whitespace
     text = "\n".join(line.strip() for line in text.splitlines())
 
-    chunks: list[str] = []
+    chunks: List[str] = []
+
     for block in text.split("\n\n"):
+
         block = block.strip()
 
-        # Skip very small noise
         if len(block) < 50:
             continue
 
-        # Hard safety cap (prevents prompt overload)
+        # Prevent large context chunks
         if len(block) > 800:
+
             for i in range(0, len(block), 600):
+
                 sub = block[i : i + 600].strip()
+
                 if len(sub) >= 50:
                     chunks.append(sub)
+
         else:
             chunks.append(block)
 
     return chunks
 
 
-# -------------------------------------------------
-# Ingestion pipeline
-# -------------------------------------------------
-def run() -> None:
-    logger.info("🚀 Starting AI ingestion pipeline")
+# --------------------------------------------------
+# Load documents
+# --------------------------------------------------
 
-    all_chunks: list[str] = []
-    metas: list[dict] = []
+def load_documents():
+
+    all_chunks: List[str] = []
+    metas: List[Dict] = []
 
     for lang in LANGUAGES:
+
         lang_dir = DATA_DIR / lang
 
         if not lang_dir.exists():
-            logger.warning(f"⚠️ Language folder missing: {lang_dir}")
+            logger.warning(f"Missing language folder: {lang}")
             continue
 
-        logger.info(f"📂 Processing language: {lang}")
+        logger.info(f"Processing language: {lang}")
 
         for file_name in FILES:
+
             file_path = lang_dir / file_name
 
             if not file_path.exists():
-                logger.warning(f"⚠️ Missing file: {lang}/{file_name}")
+                logger.warning(f"Missing file: {lang}/{file_name}")
                 continue
 
             try:
                 text = file_path.read_text(encoding="utf-8").strip()
             except Exception as e:
-                logger.error(f"❌ Failed reading {file_path}: {e}")
+                logger.error(f"Failed reading {file_path}: {e}")
                 continue
 
             chunks = chunk_text(text)
 
             if not chunks:
-                logger.warning(f"⚠️ No valid chunks in {file_path.name}")
                 continue
 
             for idx, chunk in enumerate(chunks):
+
                 metas.append(
                     {
                         "language": lang,
@@ -127,36 +132,86 @@ def run() -> None:
                         "text": chunk,
                     }
                 )
+
                 all_chunks.append(chunk)
 
-            logger.info(f"✅ {file_name}: {len(chunks)} chunks")
+            logger.info(f"{file_name} → {len(chunks)} chunks")
 
-    # -------------------------------------------------
-    # Final validation
-    # -------------------------------------------------
-    if not all_chunks:
-        raise RuntimeError(
-            "❌ Ingestion failed: No chunks found. " "Check app/data files."
+    return all_chunks, metas
+
+
+# --------------------------------------------------
+# Batch embedding
+# --------------------------------------------------
+
+def embed_chunks(chunks: List[str]):
+
+    logger.info("Generating embeddings")
+
+    embeddings = embed_texts(chunks)
+
+    if not embeddings:
+        raise RuntimeError("Embedding generation failed")
+
+    logger.info(f"Embeddings created: {len(embeddings)}")
+
+    return embeddings
+
+
+# --------------------------------------------------
+# Batch upsert to Qdrant
+# --------------------------------------------------
+
+def store_vectors(vectors, metas):
+
+    logger.info("Initializing Qdrant collection")
+
+    init_collection()
+
+    payloads = []
+
+    for meta in metas:
+
+        payloads.append(
+            {
+                "text": meta["text"],
+                "source": meta["source"],
+                "language": meta["language"],
+                "chunk_id": meta["chunk_id"],
+            }
         )
+    init_collection()
+    
+    upsert_vectors(vectors, payloads)
 
-    logger.info(f"🔹 Total chunks prepared: {len(all_chunks)}")
-
-    # -------------------------------------------------
-    # Embedding + FAISS build
-    # -------------------------------------------------
-    try:
-        embeddings = np.array(embed_texts(all_chunks), dtype=np.float32)
-    except Exception as e:
-        raise RuntimeError(f"❌ Embedding failed: {e}")
-
-    build_faiss(embeddings, metas)
-
-    logger.info("✅ FAISS index built successfully")
-    logger.info("🎉 Multilingual ingestion complete")
+    logger.info("Vectors stored in Qdrant")
 
 
-# -------------------------------------------------
+# --------------------------------------------------
+# Main ingestion pipeline
+# --------------------------------------------------
+
+def run():
+
+    logger.info("Starting ingestion pipeline")
+
+    chunks, metas = load_documents()
+
+    if not chunks:
+        raise RuntimeError("No document chunks found")
+
+    logger.info(f"Total chunks prepared: {len(chunks)}")
+
+    vectors = embed_chunks(chunks)
+
+    store_vectors(vectors, metas)
+
+    logger.info("Ingestion completed successfully")
+
+
+# --------------------------------------------------
 # CLI entry
-# -------------------------------------------------
+# --------------------------------------------------
+
 if __name__ == "__main__":
     run()

@@ -13,7 +13,7 @@ venv/
 # =========================
 .env
 .env.*
-.env.prod
+.env.production
 .env.local
 
 # =========================
@@ -63,3 +63,21 @@ nginx/
 tests/
 
 
+# AI models
+backend/ai_models/
+backend/app/ai_store/
+backend/qdrant_data/
+
+# python
+venv/
+__pycache__/
+*.pyc
+
+# env
+.env
+.env.*
+
+# migrations cache
+*.log
+
+hf-cache/
