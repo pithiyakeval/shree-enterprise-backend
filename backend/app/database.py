@@ -3,6 +3,8 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import OperationalError
+from sqlalchemy import text
+
 from app.config import settings
 
 import asyncio
@@ -15,25 +17,34 @@ logger = logging.getLogger("database")
 
 
 # -----------------------------------------------------------
-# SSL CONFIG (SUPABASE SAFE FIX)
+# SUPABASE SSL CONFIG (FINAL FIX)
 # -----------------------------------------------------------
+
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+
+# Supabase pooler sometimes fails hostname verification
+ssl_context.check_hostname = False
 
 
 # -----------------------------------------------------------
 # ASYNC DATABASE ENGINE
 # -----------------------------------------------------------
 
+# SUPABASE FIX (final)
+
 engine = create_async_engine(
 
     settings.DATABASE_URL,
 
     pool_pre_ping=True,
+    pool_recycle=300,
 
     connect_args={
-        "ssl": "prefer"
+        "ssl": False   # ← THIS FIXES EVERYTHING
     }
 
 )
+
 
 # -----------------------------------------------------------
 # SESSION MAKER
@@ -42,9 +53,7 @@ engine = create_async_engine(
 AsyncSessionLocal = sessionmaker(
 
     bind=engine,
-
     class_=AsyncSession,
-
     expire_on_commit=False,
 
 )
@@ -66,13 +75,11 @@ async def get_db():
     async with AsyncSessionLocal() as session:
 
         try:
-
             yield session
 
         except Exception as e:
 
             logger.error(f"DB session error: {e}")
-
             raise
 
         finally:
@@ -99,21 +106,19 @@ async def verify_db_connection(
 
             async with engine.begin() as conn:
 
-                from sqlalchemy import text
-
                 await conn.execute(text("SELECT 1"))
 
             logger.info("Database connection successful")
 
             return True
 
-        except OperationalError as e:
+        except OperationalError:
 
             logger.warning(
                 f"DB connection failed attempt {attempt}/{retries}"
             )
 
-            await asyncio.sleep(delay * attempt)
+            await asyncio.sleep(delay)
 
             attempt += 1
 

@@ -5,8 +5,9 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.venv/
 venv/
+venv311/
+.venv/
 
 # =========================
 # Environment / Secrets
@@ -17,16 +18,15 @@ venv/
 .env.local
 
 # =========================
-# Databases / Data
+# Databases / Local Data
 # =========================
 data/
 *.db
 *.sqlite
 *.sqlite3
-migrations_backup/
 
 # =========================
-# Node / Frontend (safety)
+# Node / Frontend
 # =========================
 node_modules/
 dist/
@@ -40,11 +40,11 @@ dist/
 Thumbs.db
 
 # =========================
-# AI / Models (CRITICAL)
+# AI local models only
 # =========================
+backend/ai_models/
 ai-models/
-hf-temp/
-ollama/
+hf-cache/
 models/
 *.gguf
 *.bin
@@ -52,32 +52,11 @@ models/
 *.pth
 
 # =========================
-# Infra (LOCAL ONLY)
+# Logs
 # =========================
-docker-compose.prod.yml
-nginx/
-
-# =========================
-# Tests (optional)
-# =========================
-tests/
-
-
-# AI models
-backend/ai_models/
-backend/app/ai_store/
-backend/qdrant_data/
-
-# python
-venv/
-__pycache__/
-*.pyc
-
-# env
-.env
-.env.*
-
-# migrations cache
 *.log
 
-hf-cache/
+# =========================
+# Optional test artifacts
+# =========================
+tests/
