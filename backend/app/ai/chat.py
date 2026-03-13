@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import logging
 import time
 import asyncio
-
+from app.ai.ai_loader import ensure_ai
 from app.ai.formatter import format_answer, clean_ai_phrases
 from app.ai.retriever import retrieve
 from app.ai.prompt_templates import build_prompt
@@ -263,7 +263,7 @@ def clean_contexts(contexts):
 
     )
 
-    return clean[:3]
+    return clean[:2]
 
 
 # ==========================================================
@@ -457,11 +457,12 @@ Please contact before visiting.""",
             "session_id":session_id
 
         }
+    
 
     # RETRIEVE
 
     try:
-
+        ensure_ai()
         contexts=retrieve(
 
             search_question,
@@ -469,12 +470,10 @@ Please contact before visiting.""",
 
         )
 
-        contexts=rerank(
-
-            search_question,
-            contexts
-
-        )
+        try:
+            contexts=rerank(search_question,contexts)
+        except:
+            pass
 
         contexts=clean_contexts(contexts)
 
@@ -488,7 +487,14 @@ Please contact before visiting.""",
 
             "answer":
 
-            "Please contact Shree Enterprise for details.",
+            """I can help with:
+
+• Solar installation
+• Mandap decoration
+• Pricing
+• Contact details
+
+Please ask a service related question.""",
 
             "session_id":session_id
 
@@ -518,7 +524,7 @@ Please contact before visiting.""",
 
             generate_answer(prompt),
 
-            timeout=15
+            timeout=10
 
         )
 

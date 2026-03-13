@@ -163,32 +163,9 @@ async def startup_event():
         f"Backend starting ({settings.ENVIRONMENT})"
     )
 
-    # DB check only (fast)
     await verify_db_connection()
 
-    logger.info("Database ready")
-
-    # Run heavy AI loading in background
-    import asyncio
-
-    asyncio.create_task(load_ai())
-
     logger.info("Backend ready")
-
-
-async def load_ai():
-
-    try:
-
-        warmup_embeddings()
-
-        init_collection()
-
-        logger.info("AI ready")
-
-    except Exception:
-
-        logger.exception("AI startup failed")
 # ==========================================================
 # SHUTDOWN
 # ==========================================================

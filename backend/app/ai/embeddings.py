@@ -25,7 +25,7 @@ logger = logging.getLogger("ai_embeddings")
 
 EMBEDDING_MODEL_NAME = os.getenv(
     "EMBEDDING_MODEL",
-    "BAAI/bge-small-en-v1.5"
+    "sentence-transformers/all-MiniLM-L6-v2"
 )
 
 # IMPORTANT → use hf-cache not ai_models

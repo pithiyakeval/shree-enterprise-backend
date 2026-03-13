@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     # EMBEDDINGS
     # =====================================================
 
-    EMBEDDING_MODEL:str="BAAI/bge-small-en-v1.5"
+    EMBEDDING_MODEL:str="sentence-transformers/all-MiniLM-L6-v2"
 
     EMBEDDING_DEVICE:str="cpu"
 
