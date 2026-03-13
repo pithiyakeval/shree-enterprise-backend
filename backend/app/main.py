@@ -65,14 +65,13 @@ app.add_middleware(
     CleanEmptyStringsMiddleware
 )
 
-
 # ==========================================================
-# CORS FIX ⭐
+# CORS CONFIG (DEV + PROD SAFE)
 # ==========================================================
 
-if settings.ENVIRONMENT=="dev":
+if settings.ENVIRONMENT == "dev":
 
-    origins=[
+    origins = [
 
         "http://localhost:3000",
         "http://localhost:5173",
@@ -84,12 +83,17 @@ if settings.ENVIRONMENT=="dev":
 
 else:
 
-    origins=[
+    origins = [
 
         settings.FRONTEND_URL,
+
         "https://www.shreeenterprise.live",
+        "https://shreeenterprise.live",
+
+        # allow local testing even in prod
         "http://localhost:8081",
         "http://127.0.0.1:8081",
+
         "http://localhost:5173"
 
     ]
@@ -99,7 +103,7 @@ app.add_middleware(
 
     CORSMiddleware,
 
-    allow_origins=["*"],
+    allow_origins=origins,   # ⭐ USE origins variable
 
     allow_credentials=True,
 
@@ -107,8 +111,9 @@ app.add_middleware(
 
     allow_headers=["*"],
 
-)
+    expose_headers=["*"]
 
+)
 
 # ==========================================================
 # REQUEST TIMER
