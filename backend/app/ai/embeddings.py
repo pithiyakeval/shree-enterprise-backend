@@ -9,7 +9,7 @@ Features:
 ✔ Cloud deployment ready
 ✔ Startup warm loading supported
 """
-
+import torch
 import os
 import logging
 import numpy as np
@@ -78,6 +78,8 @@ def get_embedding_model() -> SentenceTransformer:
 
         )
 
+        _model.max_seq_length = 256
+
         logger.info("Embedding model ready")
 
         return _model
@@ -98,40 +100,44 @@ def get_embedding_model() -> SentenceTransformer:
 def embed_texts(
     texts: Union[str, List[str]]
 ) -> List[List[float]]:
-    """
-    Generate embeddings for list.
-    Always returns float32 vectors.
-    """
 
     if not texts:
         return []
 
-    if isinstance(texts, str):
+    if isinstance(texts,str):
         texts=[texts]
 
     model=get_embedding_model()
 
     try:
 
-        vectors=model.encode(
+        import torch
 
-            texts,
+        with torch.inference_mode():
 
-            convert_to_numpy=True,
+            vectors=model.encode(
 
-            normalize_embeddings=True,
+                texts,
 
-            show_progress_bar=False,
+                convert_to_numpy=True,
 
-            batch_size=32
+                normalize_embeddings=True,
 
-        )
+                show_progress_bar=False,
 
-        return vectors.astype(np.float32).tolist()
+                batch_size=16
+
+            )
+
+        return vectors.astype(
+            np.float32
+        ).tolist()
 
     except Exception:
 
-        logger.exception("Embedding generation failed")
+        logger.exception(
+            "Embedding generation failed"
+        )
 
         return []
 
@@ -145,6 +151,7 @@ def embed_query(text:str)->List[float]:
     Optimized single query embedding.
     Uses small cache.
     """
+    text=text.lower().strip()
 
     if not text:
         return []
@@ -163,7 +170,7 @@ def embed_query(text:str)->List[float]:
     # Prevent cache overflow
     if len(EMBED_CACHE) > MAX_CACHE:
 
-        EMBED_CACHE.clear()
+        EMBED_CACHE.pop(next(iter(EMBED_CACHE)))
 
         logger.info("Embedding cache cleared")
 

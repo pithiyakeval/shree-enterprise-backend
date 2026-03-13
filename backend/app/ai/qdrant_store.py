@@ -46,7 +46,16 @@ def get_qdrant_client() -> QdrantClient:
     global _client
 
     if _client:
-        return _client
+
+        try:
+            _client.get_collections()
+            return _client
+
+        except:
+
+            logger.warning("Reconnecting Qdrant")
+
+            _client=None
 
     try:
 
@@ -58,7 +67,7 @@ def get_qdrant_client() -> QdrantClient:
 
             api_key=QDRANT_API_KEY,
 
-            timeout=30,
+            timeout=15,
 
             prefer_grpc=False
 
@@ -160,8 +169,33 @@ def upsert_vectors(
 
 def search_vectors(
     query_vector: List[float],
-    top_k: int = 5,
+    top_k: int = 40,
+    source: str | None=None
 ) -> List[Dict[str, Any]]:
+    
+    filter_condition=None
+
+    if source:
+
+        filter_condition={
+
+            "must":[
+
+                {
+
+                    "key":"source",
+
+                    "match":{
+
+                        "value":source
+
+                    }
+
+                }
+
+            ]
+
+        }
 
     if not query_vector:
         return []
@@ -170,28 +204,44 @@ def search_vectors(
 
     try:
 
-        results = client.query_points(
+        query_args={
 
-            collection_name=QDRANT_COLLECTION,
+            "collection_name":QDRANT_COLLECTION,
 
-            query=query_vector,
+            "query":query_vector,
 
-            limit=top_k,
+            "limit":top_k,
 
-            with_payload=True
+            "with_payload":True,
 
-        )
+            "with_vectors":False
 
-        return [
+        }
 
-            {
+        if filter_condition:
+
+            query_args["query_filter"]=filter_condition
+
+
+        results = client.query_points(**query_args)
+
+        clean=[]
+
+        logger.info(f"Qdrant returned {len(clean)} results")
+
+        for r in results.points:
+
+            if r.score < 0.25:   # ⭐ ignore weak matches
+                continue
+
+            clean.append({
+
                 "score": r.score,
                 "payload": r.payload
-            }
 
-            for r in results.points
+            })
 
-        ]
+        return clean
 
     except Exception:
 

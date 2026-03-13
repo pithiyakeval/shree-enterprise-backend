@@ -50,12 +50,11 @@ app=FastAPI(
 
     version="1.0.0",
 
-    docs_url="/docs" if settings.ENABLE_DOCS else None,
+    docs_url="/docs",
 
-    redoc_url="/redoc" if settings.ENABLE_DOCS else None,
+    redoc_url="/redoc",
 
 )
-
 
 # ==========================================================
 # MIDDLEWARE
@@ -196,7 +195,10 @@ app.include_router(
 
 if AI_ENABLED:
 
-    app.include_router(ai_router)
+    app.include_router(
+        ai_router,
+        prefix="/api"
+    )
 
 
 # ==========================================================

@@ -143,7 +143,7 @@ def hybrid_score(query, result):
 
     semantic = semantic_boost(query, text)
 
-    return vector + keyword + semantic
+    return (vector * 0.85) + keyword + semantic
 
 
 # ==========================================================
@@ -189,7 +189,7 @@ def retrieve(
 
     query = rewrite_query(query, history)
 
-    query = expand_query(query)
+    query = query + " shree enterprise solar mandap services"
 
     language = detect_language(query).lower()
 
@@ -212,7 +212,7 @@ def retrieve(
 
             vector,
 
-            top_k=20
+            top_k=40
 
         )
 
@@ -257,7 +257,7 @@ def retrieve(
 
         score = hybrid_score(query, r)
 
-        if score < 0.50:
+        if score < 0.32:
             continue
 
         payload_lang = payload.get("language", "")
@@ -300,6 +300,26 @@ def retrieve(
 
         if len(contexts) >= k:
             break
+
+        # fallback if strict filters removed everything
+        if not contexts and results:
+
+            for r in results[:2]:
+
+                payload=r.get("payload") or {}
+
+                text=payload.get("text")
+
+                if text:
+
+                    contexts.append({
+
+                        "text":text,
+                        "source":payload.get("source"),
+                        "score":0.30,
+                        "chunk":payload.get("chunk_id")
+
+                    })
 
     logger.info(f"Retriever returned {len(contexts)} contexts")
 

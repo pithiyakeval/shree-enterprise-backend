@@ -1,13 +1,14 @@
 """
 Production RAG ingestion pipeline for Shree Enterprise AI assistant.
 
-Features:
-- Multilingual document ingestion
-- Semantic chunking
-- Embedding generation
-- Qdrant vector storage
-- Metadata payload support
-- Batch ingestion for performance
+Optimized Features:
+✔ Business contextual chunks
+✔ Smart chunk sizing (better retrieval)
+✔ Duplicate chunk removal
+✔ Metadata keyword enrichment
+✔ Batch vector upload (memory safe)
+✔ Multilingual ingestion
+✔ Production RAG ready
 """
 
 from pathlib import Path
@@ -21,67 +22,128 @@ from app.ai.qdrant_store import init_collection, upsert_vectors
 # Logging
 # --------------------------------------------------
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s → %(message)s")
-logger = logging.getLogger("ai_ingest")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s → %(message)s"
+)
+
+logger=logging.getLogger("ai_ingest")
 
 # --------------------------------------------------
 # Path configuration
 # --------------------------------------------------
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
+BASE_DIR=Path(__file__).resolve().parent.parent
 
-LANGUAGES = ["en", "gu"]
+DATA_DIR=BASE_DIR/"data"
 
-FILES = [
+LANGUAGES=["en","gu"]
+
+FILES=[
+
     "about.txt",
+
     "solar_short.txt",
     "solar_detailed.txt",
     "solar_pricing.txt",
+
     "mandap_short.txt",
     "mandap_detailed.txt",
     "mandap_pricing.txt",
+
     "faq.txt",
+
     "contact.txt",
+
 ]
 
 # --------------------------------------------------
-# Chunking logic
+# Chunking logic (improved)
 # --------------------------------------------------
 
-def chunk_text(text: str) -> List[str]:
-    """
-    Convert raw document text into semantic chunks.
-    """
+def chunk_text(text:str)->List[str]:
 
     if not text:
         return []
 
-    text = "\n".join(line.strip() for line in text.splitlines())
+    text="\n".join(
+        line.strip()
+        for line in text.splitlines()
+    )
 
-    chunks: List[str] = []
+    chunks=[]
 
     for block in text.split("\n\n"):
 
-        block = block.strip()
+        block=block.strip()
 
-        if len(block) < 50:
+        if len(block)<50:
             continue
 
-        # Prevent large context chunks
-        if len(block) > 800:
+        # Better chunk sizing for MiniLM
+        if len(block)>500:
 
-            for i in range(0, len(block), 600):
+            for i in range(0,len(block),400):
 
-                sub = block[i : i + 600].strip()
+                sub=block[i:i+400].strip()
 
-                if len(sub) >= 50:
+                if len(sub)>=50:
+
                     chunks.append(sub)
 
         else:
+
             chunks.append(block)
 
     return chunks
+
+
+# --------------------------------------------------
+# Keyword extraction
+# --------------------------------------------------
+
+def extract_keywords(source:str):
+
+    source=source.lower()
+
+    if "solar" in source:
+
+        return [
+            "solar",
+            "panel",
+            "installation",
+            "kw",
+            "price",
+            "subsidy"
+        ]
+
+    if "mandap" in source:
+
+        return [
+            "mandap",
+            "wedding",
+            "decoration",
+            "tent",
+            "event"
+        ]
+
+    if "faq" in source:
+
+        return [
+            "faq",
+            "questions",
+            "services"
+        ]
+
+    if "contact" in source:
+
+        return [
+            "contact",
+            "phone",
+            "address"
+        ]
+
+    return ["services"]
 
 
 # --------------------------------------------------
@@ -90,101 +152,178 @@ def chunk_text(text: str) -> List[str]:
 
 def load_documents():
 
-    all_chunks: List[str] = []
-    metas: List[Dict] = []
+    all_chunks=[]
+    metas=[]
+
+    seen=set()
+
+    BUSINESS_PREFIX="Shree Enterprise services information: "
 
     for lang in LANGUAGES:
 
-        lang_dir = DATA_DIR / lang
+        lang_dir=DATA_DIR/lang
 
         if not lang_dir.exists():
-            logger.warning(f"Missing language folder: {lang}")
+
+            logger.warning(
+                f"Missing language folder: {lang}"
+            )
+
             continue
 
-        logger.info(f"Processing language: {lang}")
+        logger.info(
+            f"Processing language: {lang}"
+        )
 
         for file_name in FILES:
 
-            file_path = lang_dir / file_name
+            file_path=lang_dir/file_name
 
             if not file_path.exists():
-                logger.warning(f"Missing file: {lang}/{file_name}")
+
+                logger.warning(
+                    f"Missing file: {lang}/{file_name}"
+                )
+
                 continue
 
             try:
-                text = file_path.read_text(encoding="utf-8").strip()
+
+                text=file_path.read_text(
+                    encoding="utf-8"
+                ).strip()
+
             except Exception as e:
-                logger.error(f"Failed reading {file_path}: {e}")
+
+                logger.error(
+                    f"Failed reading {file_path}: {e}"
+                )
+
                 continue
 
-            chunks = chunk_text(text)
+            chunks=chunk_text(text)
 
             if not chunks:
                 continue
 
-            for idx, chunk in enumerate(chunks):
+            source=file_name.replace(".txt","")
 
-                metas.append(
-                    {
-                        "language": lang,
-                        "source": file_name.replace(".txt", ""),
-                        "chunk_id": idx,
-                        "text": chunk,
-                    }
-                )
+            keywords=extract_keywords(source)
+
+            count=0
+
+            for idx,chunk in enumerate(chunks):
+
+                # Add business context prefix ⭐
+                chunk=BUSINESS_PREFIX+chunk
+
+                normalized=chunk.lower().strip()
+
+                # Remove duplicates ⭐
+                if normalized in seen:
+                    continue
+
+                seen.add(normalized)
+
+                metas.append({
+
+                    "language":lang,
+
+                    "source":source,
+
+                    "chunk_id":idx,
+
+                    "text":chunk,
+
+                    "keywords":keywords
+
+                })
 
                 all_chunks.append(chunk)
 
-            logger.info(f"{file_name} → {len(chunks)} chunks")
+                count+=1
 
-    return all_chunks, metas
+            logger.info(
+                f"{file_name} → {count} chunks"
+            )
+
+    return all_chunks,metas
 
 
 # --------------------------------------------------
 # Batch embedding
 # --------------------------------------------------
 
-def embed_chunks(chunks: List[str]):
+def embed_chunks(chunks:List[str]):
 
-    logger.info("Generating embeddings")
+    logger.info(
+        "Generating embeddings"
+    )
 
-    embeddings = embed_texts(chunks)
+    embeddings=embed_texts(chunks)
 
     if not embeddings:
-        raise RuntimeError("Embedding generation failed")
 
-    logger.info(f"Embeddings created: {len(embeddings)}")
+        raise RuntimeError(
+            "Embedding generation failed"
+        )
+
+    logger.info(
+        f"Embeddings created: {len(embeddings)}"
+    )
 
     return embeddings
 
 
 # --------------------------------------------------
-# Batch upsert to Qdrant
+# Batch upsert (memory safe)
 # --------------------------------------------------
 
-def store_vectors(vectors, metas):
+def store_vectors(vectors,metas):
 
-    logger.info("Initializing Qdrant collection")
+    logger.info(
+        "Initializing Qdrant collection"
+    )
 
     init_collection()
 
-    payloads = []
+    payloads=[]
 
     for meta in metas:
 
-        payloads.append(
-            {
-                "text": meta["text"],
-                "source": meta["source"],
-                "language": meta["language"],
-                "chunk_id": meta["chunk_id"],
-            }
-        )
-    init_collection()
-    
-    upsert_vectors(vectors, payloads)
+        payloads.append({
 
-    logger.info("Vectors stored in Qdrant")
+            "text":meta["text"],
+
+            "source":meta["source"],
+
+            "language":meta["language"],
+
+            "chunk_id":meta["chunk_id"],
+
+            "keywords":meta["keywords"]
+
+        })
+
+    BATCH=50
+
+    logger.info(
+        "Uploading vectors in batches"
+    )
+
+    for i in range(0,len(vectors),BATCH):
+
+        upsert_vectors(
+
+            vectors[i:i+BATCH],
+
+            payloads[i:i+BATCH]
+
+        )
+
+    logger.info(
+        "Vectors stored in Qdrant"
+    )
 
 
 # --------------------------------------------------
@@ -193,25 +332,35 @@ def store_vectors(vectors, metas):
 
 def run():
 
-    logger.info("Starting ingestion pipeline")
+    logger.info(
+        "Starting ingestion pipeline"
+    )
 
-    chunks, metas = load_documents()
+    chunks,metas=load_documents()
 
     if not chunks:
-        raise RuntimeError("No document chunks found")
 
-    logger.info(f"Total chunks prepared: {len(chunks)}")
+        raise RuntimeError(
+            "No document chunks found"
+        )
 
-    vectors = embed_chunks(chunks)
+    logger.info(
+        f"Total chunks prepared: {len(chunks)}"
+    )
 
-    store_vectors(vectors, metas)
+    vectors=embed_chunks(chunks)
 
-    logger.info("Ingestion completed successfully")
+    store_vectors(vectors,metas)
+
+    logger.info(
+        "Ingestion completed successfully"
+    )
 
 
 # --------------------------------------------------
 # CLI entry
 # --------------------------------------------------
 
-if __name__ == "__main__":
+if __name__=="__main__":
+
     run()
