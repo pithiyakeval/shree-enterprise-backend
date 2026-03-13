@@ -87,7 +87,10 @@ else:
     origins=[
 
         settings.FRONTEND_URL,
-        "https://www.shreeenterprise.live"
+        "https://www.shreeenterprise.live",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
+        "http://localhost:5173"
 
     ]
 
