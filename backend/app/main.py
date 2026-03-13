@@ -151,7 +151,6 @@ async def global_exception_handler(request:Request, exc:Exception):
 # ==========================================================
 # STARTUP
 # ==========================================================
-
 @app.on_event("startup")
 async def startup_event():
 
@@ -159,24 +158,32 @@ async def startup_event():
         f"Backend starting ({settings.ENVIRONMENT})"
     )
 
-    # Database check
+    # DB check only (fast)
     await verify_db_connection()
-    warmup_embeddings()
 
-    # Qdrant init ⭐
+    logger.info("Database ready")
+
+    # Run heavy AI loading in background
+    import asyncio
+
+    asyncio.create_task(load_ai())
+
+    logger.info("Backend ready")
+
+
+async def load_ai():
+
     try:
+
+        warmup_embeddings()
 
         init_collection()
 
-        logger.info("Qdrant ready")
+        logger.info("AI ready")
 
-    except Exception as e:
+    except Exception:
 
-        logger.error("Qdrant init failed")
-
-        raise
-
-    logger.info("Backend ready")
+        logger.exception("AI startup failed")
 # ==========================================================
 # SHUTDOWN
 # ==========================================================
