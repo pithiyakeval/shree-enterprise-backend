@@ -28,7 +28,7 @@ logger = logging.getLogger("shree_backend.admin")
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 # Correct OAuth2 token URL
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="admin/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/admin/login")
 
 
 # ============================================================
@@ -62,7 +62,7 @@ async def get_current_admin(
 # ============================================================
 @router.post("/login", response_model=AdminLoginResponse)
 async def login(payload: AdminLogin, db: AsyncSession = Depends(get_db)):
-
+    logger.info(f"Login attempt: {payload.email}")
     admin = await authenticate_admin(db, payload.email, payload.password)
     if not admin:
         raise HTTPException(status_code=401, detail="Invalid email or password")
