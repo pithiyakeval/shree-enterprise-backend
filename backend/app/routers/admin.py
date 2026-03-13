@@ -1,245 +1,348 @@
 # app/routers/admin.py
-import logging
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from jose import JWTError
 
 from app import models
 from app.database import get_db
 from app.schemas import AdminLogin, AdminLoginResponse
-from app.utils import (
-    create_access_token,
-    decode_token,
-    get_password_hash,
-)
-from app.crud import (
-    authenticate_admin,
-    create_admin,
-    get_admin_by_email,
-)
-from app.config import settings
+from app.utils import create_access_token, decode_token, get_password_hash
+from app.crud import authenticate_admin, create_admin, get_admin_by_email
 
 logger = logging.getLogger("shree_backend.admin")
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"]
+)
 
-# Correct OAuth2 token URL
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/admin/login")
-
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/admin/login"
+)
 
 # ============================================================
-# HELPER: Get current admin from token
+# GET CURRENT ADMIN (SAFE)
 # ============================================================
+
 async def get_current_admin(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> models.AdminUser:
 
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing token")
+    try:
 
-    payload = decode_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        if not token:
+            raise HTTPException(401,"Missing token")
 
-    admin_id = payload.get("sub")
-    if not admin_id:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+        payload = decode_token(token)
 
-    admin = await db.get(models.AdminUser, int(admin_id))
-    if not admin:
-        raise HTTPException(status_code=401, detail="Admin not found")
+        if not payload:
+            raise HTTPException(401,"Invalid token")
 
-    return admin
+        admin_id = payload.get("sub")
 
+        if not admin_id:
+            raise HTTPException(401,"Invalid token")
 
-# ============================================================
-# LOGIN
-# ============================================================
-@router.post("/login", response_model=AdminLoginResponse)
-async def login(payload: AdminLogin, db: AsyncSession = Depends(get_db)):
-    logger.info(f"Login attempt: {payload.email}")
-    admin = await authenticate_admin(db, payload.email, payload.password)
-    if not admin:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    token = create_access_token({"sub": str(admin.id)})
-    logger.info(f"Admin logged in: {admin.email}")
-
-    return {"access_token": token, "token_type": "bearer"}
-
-
-# ============================================================
-# REGISTER FIRST ADMIN (only when DB empty)
-# ============================================================
-@router.post("/register-first", response_model=AdminLoginResponse)
-async def register_first_admin(payload: AdminLogin, db: AsyncSession = Depends(get_db)):
-
-    # check if admins exist
-    count_query = await db.execute(select(func.count()).select_from(models.AdminUser))
-    total_admins = count_query.scalar_one()
-
-    if total_admins > 0:
-        raise HTTPException(
-            status_code=403,
-            detail="First admin already exists. Use /api/admin/register (protected).",
+        admin = await db.get(
+            models.AdminUser,
+            int(admin_id)
         )
 
-    admin = await create_admin(db, payload.email, payload.password)
-    token = create_access_token({"sub": str(admin.id)})
+        if not admin:
+            raise HTTPException(401,"Admin not found")
 
-    logger.info(f"First admin created: {admin.email}")
+        return admin
 
-    return {"access_token": token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        logger.exception("Token validation failed")
+
+        raise HTTPException(
+            401,
+            "Authentication failed"
+        )
 
 
 # ============================================================
-# REGISTER MORE ADMINS (Admin-only)
+# LOGIN (CRASH SAFE)
 # ============================================================
-@router.post("/register", response_model=AdminLoginResponse)
-async def register_admin(
+
+@router.post("/login",response_model=AdminLoginResponse)
+async def login(
     payload: AdminLogin,
-    current_admin: models.AdminUser = Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db)
 ):
 
-    exists = await get_admin_by_email(db, payload.email)
-    if exists:
-        raise HTTPException(status_code=400, detail="Admin already exists")
+    try:
 
-    admin = await create_admin(db, payload.email, payload.password)
-    token = create_access_token({"sub": str(admin.id)})
+        logger.info(f"Login attempt → {payload.email}")
 
-    logger.info(f"New admin created: {admin.email} by {current_admin.email}")
+        admin = await authenticate_admin(
+            db,
+            payload.email,
+            payload.password
+        )
 
-    return {"access_token": token, "token_type": "bearer"}
+        if not admin:
+
+            logger.warning("Invalid credentials")
+
+            raise HTTPException(
+                401,
+                "Invalid email or password"
+            )
+
+        token=create_access_token(
+            {"sub":str(admin.id)}
+        )
+
+        logger.info("Login success")
+
+        return {
+            "access_token":token,
+            "token_type":"bearer"
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        logger.exception("LOGIN CRASH")
+
+        raise HTTPException(
+            500,
+            "Login failed"
+        )
 
 
 # ============================================================
-# LEAD DATA (PROTECTED)
+# REGISTER FIRST ADMIN
 # ============================================================
-@router.get("/leads")
-async def all_leads(
-    db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin),
+
+@router.post(
+    "/register-first",
+    response_model=AdminLoginResponse
+)
+async def register_first_admin(
+    payload:AdminLogin,
+    db:AsyncSession=Depends(get_db)
 ):
-    from app.crud import get_all_base_leads
 
-    return await get_all_base_leads(db)
+    try:
+
+        result=await db.execute(
+            select(func.count()).select_from(
+                models.AdminUser
+            )
+        )
+
+        total=result.scalar_one()
+
+        if total>0:
+
+            raise HTTPException(
+                403,
+                "First admin already exists"
+            )
+
+        admin=await create_admin(
+            db,
+            payload.email,
+            payload.password
+        )
+
+        token=create_access_token(
+            {"sub":str(admin.id)}
+        )
+
+        logger.info(
+            f"First admin created → {admin.email}"
+        )
+
+        return {
+            "access_token":token,
+            "token_type":"bearer"
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception:
+
+        logger.exception("Admin register failed")
+
+        raise HTTPException(
+            500,
+            "Admin creation failed"
+        )
 
 
-@router.get("/solar")
-async def solar_list(
-    db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin),
+# ============================================================
+# REGISTER MORE ADMINS
+# ============================================================
+
+@router.post(
+    "/register",
+    response_model=AdminLoginResponse
+)
+async def register_admin(
+
+    payload:AdminLogin,
+
+    current_admin:models.AdminUser=Depends(
+        get_current_admin
+    ),
+
+    db:AsyncSession=Depends(get_db)
 ):
-    from app.crud import get_solar_requests
 
-    rows = await get_solar_requests(db)
-    return [{"solar": s, "base": b} for s, b in rows]
+    try:
 
+        exists=await get_admin_by_email(
+            db,
+            payload.email
+        )
 
-@router.get("/mandap")
-async def mandap_list(
-    db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin),
-):
-    from app.crud import get_mandap_requests
+        if exists:
 
-    rows = await get_mandap_requests(db)
-    return [{"mandap": m, "base": b} for m, b in rows]
+            raise HTTPException(
+                400,
+                "Admin already exists"
+            )
 
+        admin=await create_admin(
+            db,
+            payload.email,
+            payload.password
+        )
 
-@router.get("/combined")
-async def combined_list(
-    db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin),
-):
-    from app.crud import get_combined_requests
+        token=create_access_token(
+            {"sub":str(admin.id)}
+        )
 
-    rows = await get_combined_requests(db)
-    return [{"combined": c, "base": b} for c, b in rows]
+        return {
+            "access_token":token,
+            "token_type":"bearer"
+        }
 
+    except HTTPException:
+        raise
 
-# ============================================================
-# MARK LEAD DONE
-# ============================================================
-@router.post("/lead/{lead_id}/done")
-async def mark_done(
-    lead_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin),
-):
-    lead = await db.get(models.BaseLead, lead_id)
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    except Exception:
 
-    lead.status = "done"
-    await db.commit()
+        logger.exception("Admin register failed")
 
-    logger.info(f"Lead {lead_id} marked done by {current_admin.email}")
-    return {"success": True, "message": "Lead marked as done"}
+        raise HTTPException(
+            500,
+            "Admin creation failed"
+        )
 
 
 # ============================================================
-# DELETE LEAD
+# ADMIN LIST
 # ============================================================
-@router.delete("/lead/{lead_id}")
-async def delete_lead(
-    lead_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin),
-):
-    lead = await db.get(models.BaseLead, lead_id)
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
 
-    await db.delete(lead)
-    await db.commit()
-
-    logger.info(f"Lead {lead_id} deleted by {current_admin.email}")
-    return {"success": True, "message": "Lead deleted"}
-
-
-# ============================================================
-# ADMIN LIST (Protected)
-# ============================================================
 @router.get("/admins")
 async def list_admins(
-    current_admin: models.AdminUser = Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db),
+
+    current_admin:models.AdminUser=
+        Depends(get_current_admin),
+
+    db:AsyncSession=Depends(get_db)
+
 ):
-    result = await db.execute(select(models.AdminUser))
-    admins = result.scalars().all()
 
-    return [{"id": a.id, "email": a.email, "created_at": a.created_at} for a in admins]
+    result=await db.execute(
+        select(models.AdminUser)
+    )
+
+    admins=result.scalars().all()
+
+    return [
+
+        {
+            "id":a.id,
+            "email":a.email,
+            "created_at":a.created_at
+        }
+
+        for a in admins
+
+    ]
 
 
 # ============================================================
-# ADMIN PASSWORD RESET
+# PASSWORD RESET
 # ============================================================
+
 @router.post("/reset-password/{admin_id}")
 async def reset_password(
-    admin_id: int,
-    payload: dict = Body(...),  # expects {"new_password": "..."}
-    db: AsyncSession = Depends(get_db),
-    current_admin: models.AdminUser = Depends(get_current_admin),
+
+    admin_id:int,
+
+    payload:dict=Body(...),
+
+    db:AsyncSession=Depends(get_db),
+
+    current_admin:models.AdminUser=
+        Depends(get_current_admin)
+
 ):
 
-    new_password = payload.get("new_password")
-    if not new_password or len(new_password) < 6:
-        raise HTTPException(400, "new_password must be at least 6 characters")
+    try:
 
-    admin = await db.get(models.AdminUser, admin_id)
-    if not admin:
-        raise HTTPException(404, "Admin not found")
+        new_password=payload.get(
+            "new_password"
+        )
 
-    admin.password_hash = get_password_hash(new_password)
-    await db.commit()
+        if not new_password:
 
-    logger.info(f"Password reset for {admin.email} by {current_admin.email}")
-    return {"success": True, "message": "Password reset successful"}
+            raise HTTPException(
+                400,
+                "Password required"
+            )
+
+        admin=await db.get(
+            models.AdminUser,
+            admin_id
+        )
+
+        if not admin:
+
+            raise HTTPException(
+                404,
+                "Admin not found"
+            )
+
+        admin.password_hash=get_password_hash(
+            new_password
+        )
+
+        await db.commit()
+
+        return {
+            "success":True
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception:
+
+        logger.exception(
+            "Password reset failed"
+        )
+
+        raise HTTPException(
+            500,
+            "Reset failed"
+        )
