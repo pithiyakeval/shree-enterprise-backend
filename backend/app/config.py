@@ -17,6 +17,10 @@ class Settings(BaseSettings):
 
     LOG_LEVEL:str="INFO"
 
+    APP_NAME:str="Shree Enterprise API"
+
+    API_V1_PREFIX:str="/api"
+
 
     # =====================================================
     # DATABASE
@@ -25,6 +29,10 @@ class Settings(BaseSettings):
     DATABASE_URL:str
 
     DATABASE_URL_SYNC:str
+
+    DB_POOL_SIZE:int=10
+
+    DB_MAX_OVERFLOW:int=20
 
 
     # =====================================================
@@ -36,6 +44,8 @@ class Settings(BaseSettings):
     ALGORITHM:str="HS256"
 
     ACCESS_TOKEN_EXPIRE_MINUTES:int=1440
+
+    PASSWORD_MIN_LENGTH:int=6
 
 
     # =====================================================
@@ -52,6 +62,8 @@ class Settings(BaseSettings):
     # =====================================================
 
     FRONTEND_URL:str
+
+    ADDITIONAL_ORIGINS:Optional[str]=None
 
 
     # =====================================================
@@ -77,7 +89,9 @@ class Settings(BaseSettings):
 
     GROQ_API_KEY:str
 
-    LLM_TIMEOUT:int=20
+    LLM_TIMEOUT:int=30
+
+    MAX_AI_RETRIES:int=2
 
 
     # =====================================================
@@ -89,6 +103,8 @@ class Settings(BaseSettings):
     QDRANT_API_KEY:Optional[str]=None
 
     QDRANT_COLLECTION:str="shree_docs"
+
+    VECTOR_TOP_K:int=5
 
 
     # =====================================================
@@ -111,6 +127,24 @@ class Settings(BaseSettings):
     MAX_HISTORY:int=50
 
     MAX_CONTEXT:int=1500
+
+    REQUEST_TIMEOUT:int=30
+
+
+    # =====================================================
+    # RATE LIMITING (future ready)
+    # =====================================================
+
+    RATE_LIMIT_ENABLED:bool=False
+
+    RATE_LIMIT:str="100/minute"
+
+
+    # =====================================================
+    # HEALTH CHECK
+    # =====================================================
+
+    HEALTH_PATH:str="/health"
 
 
     # =====================================================
@@ -135,6 +169,7 @@ class Settings(BaseSettings):
     def owner_email_list(self)->List[str]:
 
         if not self.OWNER_EMAILS:
+
             return []
 
         return [
@@ -146,6 +181,31 @@ class Settings(BaseSettings):
             if e.strip()
 
         ]
+
+
+    def cors_origins(self)->List[str]:
+
+        origins=[
+
+            self.FRONTEND_URL,
+
+            "https://shreeenterprise.live",
+
+            "https://www.shreeenterprise.live",
+
+            "http://localhost:5173",
+
+            "http://localhost:8080",
+
+            "http://localhost:8081"
+
+        ]
+
+        if self.ADDITIONAL_ORIGINS:
+
+            origins+=self.ADDITIONAL_ORIGINS.split(",")
+
+        return list(set(origins))
 
 
     @field_validator("*",mode="before")
