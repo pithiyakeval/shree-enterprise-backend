@@ -6,11 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-from app.ai.qdrant_store import init_collection
 from app.database import verify_db_connection, close_db
 from app.routers import lead, admin
 from app.config import settings
 from app.middleware.cleaner import CleanEmptyStringsMiddleware
+from app.ai.qdrant_store import init_collection
 from app.ai.embeddings import warmup_embeddings
 
 
@@ -21,11 +21,12 @@ from app.ai.embeddings import warmup_embeddings
 try:
 
     from app.ai.chat import router as ai_router
-    AI_ENABLED=True
+
+    AI_ENABLED = True
 
 except Exception as e:
 
-    AI_ENABLED=False
+    AI_ENABLED = False
 
     logging.warning(f"AI disabled: {e}")
 
@@ -42,14 +43,14 @@ logging.basicConfig(
 
 )
 
-logger=logging.getLogger("shree_backend")
+logger = logging.getLogger("shree_backend")
 
 
 # ==========================================================
 # FASTAPI INIT
 # ==========================================================
 
-app=FastAPI(
+app = FastAPI(
 
     title="Shree Enterprise Backend",
 
@@ -66,7 +67,6 @@ app=FastAPI(
 # MIDDLEWARE
 # ==========================================================
 
-# Clean empty strings
 app.add_middleware(
     CleanEmptyStringsMiddleware
 )
@@ -76,9 +76,8 @@ app.add_middleware(
 # CORS CONFIG (FINAL PRODUCTION SAFE)
 # ==========================================================
 
-DEV_ORIGINS=[
+DEV_ORIGINS = [
 
-    "http://localhost:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8080",
@@ -87,22 +86,22 @@ DEV_ORIGINS=[
 ]
 
 
-PROD_ORIGINS=[
+PROD_ORIGINS = [
 
     "https://shreeenterprise.live",
     "https://www.shreeenterprise.live",
-    "https://shree-enterprise-platform.vercel.app"
 
 ]
 
 
-if settings.ENVIRONMENT.lower()=="dev":
+# Select origins
+if settings.ENVIRONMENT == "production":
 
-    origins=DEV_ORIGINS
+    origins = PROD_ORIGINS
 
 else:
 
-    origins=PROD_ORIGINS + DEV_ORIGINS
+    origins = DEV_ORIGINS
 
 
 app.add_middleware(
@@ -115,9 +114,20 @@ app.add_middleware(
 
     allow_credentials=True,
 
-    allow_methods=["*"],
+    allow_methods=["GET","POST","PUT","DELETE","PATCH","OPTIONS"],
 
-    allow_headers=["*"],
+    allow_headers=[
+
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "X-Requested-With"
+
+    ],
+
+    expose_headers=["*"],
 
     max_age=86400
 
@@ -138,7 +148,8 @@ app.add_middleware(
         "www.shreeenterprise.live",
         "*.vercel.app",
         "localhost",
-        "127.0.0.1"
+        "127.0.0.1",
+        "*.onrender.com"
 
     ]
 
@@ -146,19 +157,19 @@ app.add_middleware(
 
 
 # ==========================================================
-# REQUEST TIMER MIDDLEWARE
+# REQUEST TIMER
 # ==========================================================
 
 @app.middleware("http")
-async def process_timer(request:Request, call_next):
+async def process_time(request: Request, call_next):
 
-    start=time.time()
+    start = time.time()
 
-    response=await call_next(request)
+    response = await call_next(request)
 
-    duration=round(time.time()-start,3)
+    duration = round(time.time() - start, 3)
 
-    response.headers["X-Process-Time"]=str(duration)
+    response.headers["X-Process-Time"] = str(duration)
 
     return response
 
@@ -168,7 +179,7 @@ async def process_timer(request:Request, call_next):
 # ==========================================================
 
 @app.exception_handler(Exception)
-async def global_exception_handler(request:Request, exc:Exception):
+async def global_exception_handler(request: Request, exc: Exception):
 
     logger.exception("Unhandled server error")
 
@@ -176,11 +187,7 @@ async def global_exception_handler(request:Request, exc:Exception):
 
         status_code=500,
 
-        content={
-
-            "error":"Internal Server Error"
-
-        }
+        content={"error":"Internal Server Error"}
 
     )
 
@@ -192,9 +199,7 @@ async def global_exception_handler(request:Request, exc:Exception):
 @app.on_event("startup")
 async def startup_event():
 
-    logger.info(
-        f"Backend starting ({settings.ENVIRONMENT})"
-    )
+    logger.info(f"Backend starting ({settings.ENVIRONMENT})")
 
     await verify_db_connection()
 
@@ -259,7 +264,7 @@ if AI_ENABLED:
 
 
 # ==========================================================
-# HEALTH CHECK
+# HEALTH
 # ==========================================================
 
 @app.get("/health")
