@@ -1,7 +1,7 @@
 import logging
 import time
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
@@ -21,8 +21,11 @@ from app.ai.embeddings import warmup_embeddings
 try:
     from app.ai.chat import router as ai_router
     AI_ENABLED = True
+
 except Exception as e:
+
     AI_ENABLED = False
+
     logging.warning(f"AI disabled: {e}")
 
 
@@ -31,8 +34,11 @@ except Exception as e:
 # ==========================================================
 
 logging.basicConfig(
+
     level=logging.INFO,
+
     format="%(levelname)s [%(asctime)s] %(name)s → %(message)s",
+
 )
 
 logger = logging.getLogger("shree_backend")
@@ -43,51 +49,41 @@ logger = logging.getLogger("shree_backend")
 # ==========================================================
 
 app = FastAPI(
-    title="Shree Enterprise Backend",
+
+    title=settings.APP_NAME,
+
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+
+    docs_url="/docs" if settings.ENABLE_DOCS else "/docs",
+
+    redoc_url="/redoc" if settings.ENABLE_DOCS else None,
+
 )
 
 
 # ==========================================================
-# CORS (CORRECT VERSION – DO NOT CUSTOM HANDLE OPTIONS)
+# CORS (SINGLE SOURCE FROM CONFIG)
 # ==========================================================
-
-origins = [
-
-    "https://shreeenterprise.live",
-    "https://www.shreeenterprise.live",
-
-    "https://shree-enterprise.vercel.app",
-    "https://shree-enterprise-showcase.vercel.app",
-
-    "http://localhost:5173",
-    "http://127.0.0.1:5173"
-
-]
 
 app.add_middleware(
 
     CORSMiddleware,
 
-    allow_origins=origins,
+    allow_origins=settings.cors_origins(),
 
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*",
 
-    allow_credentials=False,
+    allow_credentials=True,
 
     allow_methods=["*"],
 
-    allow_headers=["*"],
-
-    max_age=86400
+    allow_headers=["*"]
 
 )
 
 
 # ==========================================================
-# TRUSTED HOST
+# TRUSTED HOST (AFTER CORS)
 # ==========================================================
 
 app.add_middleware(
@@ -97,13 +93,18 @@ app.add_middleware(
     allowed_hosts=[
 
         "shreeenterprise.live",
+
         "www.shreeenterprise.live",
 
         "*.vercel.app",
+
         "*.onrender.com",
 
         "localhost",
-        "127.0.0.1"
+
+        "127.0.0.1",
+
+        "*"
 
     ]
 
@@ -119,6 +120,30 @@ app.add_middleware(
     CleanEmptyStringsMiddleware
 
 )
+
+
+# ==========================================================
+# FAST OPTIONS HANDLER (SAFE VERSION)
+# ==========================================================
+
+@app.middleware("http")
+async def cors_preflight_fix(request: Request, call_next):
+
+    if request.method == "OPTIONS":
+
+        response = Response(status_code=200)
+
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("origin","*")
+
+        response.headers["Access-Control-Allow-Methods"] = "*"
+
+        response.headers["Access-Control-Allow-Headers"] = "*"
+
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+
+        return response
+
+    return await call_next(request)
 
 
 # ==========================================================
@@ -203,7 +228,7 @@ app.include_router(
 
     lead.router,
 
-    prefix="/api"
+    prefix=settings.API_V1_PREFIX
 
 )
 
@@ -211,7 +236,7 @@ app.include_router(
 
     admin.router,
 
-    prefix="/api"
+    prefix=settings.API_V1_PREFIX
 
 )
 
@@ -221,7 +246,7 @@ if AI_ENABLED:
 
         ai_router,
 
-        prefix="/api"
+        prefix=settings.API_V1_PREFIX
 
     )
 
@@ -230,7 +255,7 @@ if AI_ENABLED:
 # HEALTH
 # ==========================================================
 
-@app.get("/health")
+@app.get(settings.HEALTH_PATH)
 async def health():
 
     return {
