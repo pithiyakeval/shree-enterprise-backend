@@ -28,7 +28,7 @@ logger = logging.getLogger("shree_backend.admin")
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 # Correct OAuth2 token URL
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/admin/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/admin/login")
 
 
 # ============================================================
